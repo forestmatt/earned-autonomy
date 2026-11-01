@@ -10,7 +10,7 @@ import type { Level, RiskClass } from "./types.js";
 export interface ActionClass {
   key: string;
   risk: RiskClass;
-  /** Defaults to true for the two reversible risk classes. */
+  /** Defaults to true, except for the irreversible and regulated risk classes. */
   reversible?: boolean;
   /** Overrides the default ceiling for the risk class. */
   ceiling?: Level;
@@ -68,5 +68,5 @@ export function resolveActionClass(config: Config, action: string): ActionClass 
 }
 
 export function isReversible(action: ActionClass): boolean {
-  return action.reversible ?? (action.risk === "reversible_self" || action.risk === "reversible_shared");
+  return action.reversible ?? (action.risk !== "irreversible" && action.risk !== "regulated");
 }
