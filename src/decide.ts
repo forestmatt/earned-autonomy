@@ -1,10 +1,10 @@
 import { allMatch, anyActionMatches, actionMatches, type EvalContext } from "./conditions.js";
-import { isReversible, resolveActionClass, type ActionClass, type Config } from "./config.js";
+import { isReversible, resolveActionClass, supportedLevels, type ActionClass, type Config } from "./config.js";
 import { checkEntitlement, type Subscription } from "./entitlements.js";
 import { evaluateExperiments } from "./experiments.js";
 import { describeFlagReason, evaluateFlag } from "./flags.js";
 import { hashOf } from "./hash.js";
-import { DEFAULT_CEILINGS, MODES, effectiveLevel, isLevel, verdictFor } from "./levels.js";
+import { DEFAULT_CEILINGS, MODES, effectiveLevel, isLevel, verdictFor, snapDown } from "./levels.js";
 import { DEFAULT_PROMOTION, promotionStatus } from "./promotion.js";
 import { evaluateRule, type RuleEffect } from "./rules.js";
 import type { TrustScope } from "./trust.js";
@@ -323,7 +323,16 @@ function run(
     }
   }
 
-  // 9. Level to outcome.
+  // 9. Snap to the levels this action supports, rounding down (layer 1 invariant 10).
+  // The gate that set the level stays named. The chain records the snap.
+  const supported = supportedLevels(ac);
+  const snapped = snapDown(level, supported);
+  if (snapped !== level) {
+    chain.push({ step: "levels", result: "cap", id: `levels:${ac.key}`, level: snapped, detail: `L${level} isn't used by ${ac.key}` });
+    level = snapped;
+  }
+
+  // 10. Level to outcome.
   let decision = verdictFor(level);
   let message = MESSAGES[level](ac.delaySeconds ?? DEFAULT_DELAY_SECONDS);
   let next: NextStep = decision === "ask" ? "approve" : level === 2 ? "wait" : "none";
@@ -347,7 +356,7 @@ function run(
   } else if (decision === "ask" && state.trust && eff.binding === "earned") {
     // Approval fatigue is a promotion trigger. If the evidence is there, offer.
     const thresholds = config.promotion?.[ac.risk] ?? DEFAULT_PROMOTION[ac.risk];
-    const promo = promotionStatus(state.trust, thresholds, Math.min(ceiling, rollout, experiment) as Level, now);
+    const promo = promotionStatus(state.trust, thresholds, Math.min(ceiling, rollout, experiment) as Level, now, supported);
     if (promo.eligible && promo.message) {
       next = "request_promotion";
       message = `${message} ${promo.message}`;

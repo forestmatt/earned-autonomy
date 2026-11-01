@@ -1,4 +1,4 @@
-import { LEVEL_NAMES, clampLevel } from "./levels.js";
+import { LEVEL_NAMES, clampLevel, nextSupported, snapDown } from "./levels.js";
 import { RECENT_LIMIT, emptyStats, type TrustScope } from "./trust.js";
 import type { Attributes, Level, Outcome, RiskClass } from "./types.js";
 
@@ -40,6 +40,8 @@ export interface RecordOptions {
   /** The level the decision ran at (after tripwires). */
   level: Level;
   now: number;
+  /** Levels the action supports, so a demotion lands on a real level. */
+  supported?: readonly Level[];
   /** True when the ask came from a tripwire rather than the level. */
   tripwire?: boolean;
   /** How long the human took to answer, for attention weighting. */
@@ -57,10 +59,12 @@ export interface RecordResult {
   reason?: string;
 }
 
-function demote(scope: TrustScope, now: number): TrustScope {
+function demote(scope: TrustScope, now: number, supported?: readonly Level[]): TrustScope {
+  const down = clampLevel(Math.max(1, scope.earned - 1));
   return {
     ...scope,
-    earned: clampLevel(Math.max(1, scope.earned - 1)),
+    // Drop to the next supported level below, so an email at L3 goes straight back to Ask.
+    earned: supported ? (Math.max(1, snapDown(down, supported)) as Level) : down,
     levelSince: now,
     stats: emptyStats(),
     tripwireRejects: 0,
@@ -130,13 +134,13 @@ export function recordOutcome(scope: TrustScope, outcome: Outcome, opts: RecordO
   }
 
   if (negative && scope.earned >= 3 && (level >= 2 || outcome === "undone")) {
-    return { scope: demote(next, now), demoted: true, reason: `${outcome} at L${scope.earned}` };
+    return { scope: demote(next, now, opts.supported), demoted: true, reason: `${outcome} at L${scope.earned}` };
   }
   if (negative && opts.tripwire) {
     const rejects = (scope.tripwireRejects ?? 0) + 1;
     next = { ...next, tripwireRejects: rejects };
     if (rejects >= TRIPWIRE_REJECTS_TO_DEMOTE && scope.earned >= 2) {
-      return { scope: demote(next, now), demoted: true, reason: `${rejects} rejected tripwire asks` };
+      return { scope: demote(next, now, opts.supported), demoted: true, reason: `${rejects} rejected tripwire asks` };
     }
   }
   return { scope: next, demoted: false };
@@ -158,11 +162,12 @@ export interface PromotionStatus {
   progress: { approvals: number; needed: number | null; rate: number; dwellMs: number };
 }
 
+/** The offer, keyed by the level being offered (not the current one), since promotion can skip unsupported levels. */
 const OFFER: Partial<Record<Level, string>> = {
-  1: "Want me to give you a heads up and go ahead unless you stop me?",
-  2: "Want me to just do them and tell you after?",
-  3: "Want me to just do them and send you a summary?",
-  4: "Want me to handle these on my own? You can always stop me.",
+  2: "Want me to give you a heads up and go ahead unless you stop me?",
+  3: "Want me to just do them and tell you after?",
+  4: "Want me to just do them and send you a summary?",
+  5: "Want me to handle these on my own? You can always stop me.",
 };
 
 export function promotionStatus(
@@ -170,6 +175,8 @@ export function promotionStatus(
   thresholds: PromotionThresholds,
   ceiling: Level,
   now: number,
+  /** Levels the action supports. Promotion goes to the next supported one (layer 1 invariants 4 and 10). */
+  supported: readonly Level[] = [0, 1, 2, 3, 4, 5],
 ): PromotionStatus {
   const s = scope.stats;
   const rate = s.responses === 0 ? 0 : (s.approved + 0.5 * s.edited) / s.responses;
@@ -178,7 +185,8 @@ export function promotionStatus(
   const cap = Math.min(ceiling, scope.userCap ?? 5);
   const missing: string[] = [];
 
-  if (scope.earned >= cap) missing.push("at_ceiling");
+  const target = nextSupported(scope.earned, supported, clampLevel(cap));
+  if (target === null) missing.push("at_ceiling");
   if (thresholds.minApprovals === null) missing.push("manual_only");
   else if (s.weightedApproved < thresholds.minApprovals) missing.push("approvals");
   if (rate < thresholds.minRate) missing.push("rate");
@@ -188,10 +196,9 @@ export function promotionStatus(
   if (scope.declinedAt !== undefined && now - scope.declinedAt < thresholds.declineCooldownMs) missing.push("declined_recently");
 
   const eligible = missing.length === 0;
-  const next = scope.earned < 5 ? clampLevel(scope.earned + 1) : null;
-  const status: PromotionStatus = { eligible, current: scope.earned, next: eligible ? next : null, missing, progress };
-  if (eligible) {
-    status.message = `You've approved the last ${s.approved} of these. ${OFFER[scope.earned] ?? ""}`.trim();
+  const status: PromotionStatus = { eligible, current: scope.earned, next: eligible ? target : null, missing, progress };
+  if (eligible && target !== null) {
+    status.message = `You've approved the last ${s.approved} of these. ${OFFER[target] ?? ""}`.trim();
   }
   return status;
 }
@@ -211,10 +218,10 @@ export type PromotionResult =
  */
 export function acceptPromotion(
   scope: TrustScope,
-  args: { approver: Approver; thresholds: PromotionThresholds; ceiling: Level; now: number },
+  args: { approver: Approver; thresholds: PromotionThresholds; ceiling: Level; now: number; supported?: readonly Level[] },
 ): PromotionResult {
   if (args.approver.kind !== "human") return { ok: false, error: "approver_not_human" };
-  const status = promotionStatus(scope, args.thresholds, args.ceiling, args.now);
+  const status = promotionStatus(scope, args.thresholds, args.ceiling, args.now, args.supported);
   if (!status.eligible || status.next === null) return { ok: false, error: "not_eligible", missing: status.missing };
   return {
     ok: true,

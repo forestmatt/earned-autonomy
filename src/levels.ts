@@ -27,6 +27,38 @@ export const DEFAULT_CEILINGS: Record<RiskClass, Level> = {
   regulated: 1,
 };
 
+/**
+ * Levels each risk class supports by default (docs/autonomy-levels.md, "Supported
+ * levels per action class"). A heads up suits money (a scheduled action you can
+ * cancel) but not an email, which people either approve or want sent with an undo.
+ */
+export const DEFAULT_SUPPORTED: Record<RiskClass, readonly Level[]> = {
+  reversible_self: [0, 1, 2, 3, 4, 5],
+  reversible_shared: [0, 1, 2, 3, 4, 5],
+  hard_to_reverse: [0, 1, 3, 4],
+  irreversible: [0, 1, 2],
+  regulated: [0, 1],
+};
+
+/** Suggest and Ask are always supported, because asking is always safe. */
+export function normaliseSupported(levels: readonly Level[]): Level[] {
+  return [...new Set<Level>([0, 1, ...levels])].sort((a, b) => a - b);
+}
+
+/** Round down to the nearest supported level, never up (layer 1 invariant 10). */
+export function snapDown(level: Level, supported: readonly Level[]): Level {
+  let best: Level = 0;
+  for (const l of supported) if (l <= level && l > best) best = l;
+  return best;
+}
+
+/** The next supported level above `level`, up to `cap`, or null when there is none. */
+export function nextSupported(level: Level, supported: readonly Level[], cap: Level = 5): Level | null {
+  let best: Level | null = null;
+  for (const l of supported) if (l > level && l <= cap && (best === null || l < best)) best = l;
+  return best;
+}
+
 export const RISK_ORDER: readonly RiskClass[] = [
   "reversible_self",
   "reversible_shared",

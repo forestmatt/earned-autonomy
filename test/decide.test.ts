@@ -68,8 +68,9 @@ describe("decide", () => {
     expect(d).toMatchObject({ decision: "allow", level: 3, mode: "act_and_tell", binding: "earned:L3", next: "none" });
   });
 
-  it("allows L2 with a delay", () => {
-    const d = run({ action: "email.send", context: { to: "a@x.com" } }, { subscription: pro, trust: trusted(4) });
+  it("allows L2 with a delay where the action supports it", () => {
+    const withHeadsUp: Config = { ...config, actions: { ...config.actions, "email.send": { ...config.actions["email.send"]!, levels: [0, 1, 2, 3, 4] } } };
+    const d = run({ action: "email.send", context: { to: "a@x.com" } }, { subscription: pro, trust: trusted(4) }, withHeadsUp);
     expect(d).toMatchObject({ decision: "allow", level: 2, mode: "heads_up", binding: "rollout:email-send", next: "wait", delaySeconds: 600 });
     expect(d.message).toContain("unless you stop me");
   });

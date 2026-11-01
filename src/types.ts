@@ -70,6 +70,7 @@ export interface ChainStep {
     | "experiment"
     | "effective"
     | "tripwire"
+    | "levels"
     | "mode";
   /** What happened at this step. `pass` means it did not change the result. */
   result: "pass" | "deny" | "ask" | "cap" | "skip";
