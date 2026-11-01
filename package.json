@@ -1,8 +1,8 @@
 {
-  "name": "@throttle/core",
+  "name": "@throtl/core",
   "version": "0.1.0",
   "private": true,
-  "description": "The Throttle decision engine. Pure functions, no I/O.",
+  "description": "The Throtl decision engine. Pure functions, no I/O.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

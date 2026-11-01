@@ -1,9 +1,9 @@
-# @throttle/core
+# @throtl/core
 
-The Throttle decision engine. Pure TypeScript, no I/O, no dependencies. The API Worker, the SDK (local evaluation) and the MCP server all run this same code.
+The Throtl decision engine. Pure TypeScript, no I/O, no dependencies. The API Worker, the SDK (local evaluation) and the MCP server all run this same code.
 
 ```ts
-import { decide, recordOutcome, DEFAULT_PACK } from "@throttle/core";
+import { decide, recordOutcome, DEFAULT_PACK } from "@throtl/core";
 
 const d = decide(
   { agent: "inbox", subject: "user_123", action: "email.send", context: { to: "new@client.com" } },

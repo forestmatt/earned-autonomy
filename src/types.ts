@@ -1,5 +1,5 @@
 /**
- * Core types for the Throttle decision engine.
+ * Core types for the Throtl decision engine.
  *
  * Layer 1 (the standard) is the levels, the decision order, the outcome
  * vocabulary and the reason chain. Layer 2 (rules) is in rules.ts.
