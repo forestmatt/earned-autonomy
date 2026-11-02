@@ -1,4 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // For Web Crypto, TextEncoder and atob/btoa in approvals.ts. No Node types, so core stays portable.
+    "lib": ["ES2022", "DOM"]
+  },
   "include": ["src", "test"]
 }
