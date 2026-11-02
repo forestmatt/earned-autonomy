@@ -4,7 +4,7 @@ import { DEFAULT_PROMOTION, newScope, promotionStatus, promotionThresholds, type
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
-describe("promotion defaults (Matt, 2026-11-02)", () => {
+describe("Default pack promotion thresholds", () => {
   it("match the agreed Default pack", () => {
     const pick = (r: keyof typeof DEFAULT_PROMOTION) => {
       const t = DEFAULT_PROMOTION[r];

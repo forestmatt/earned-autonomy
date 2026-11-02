@@ -18,7 +18,7 @@ export const LEVEL_NAMES: Record<Level, string> = {
   5: "Autonomous",
 };
 
-/** Default ceilings per risk class (docs/autonomy-levels.md, rule 6). */
+/** Default ceilings per risk class (SPEC.md, "Default ceilings by risk class"). */
 export const DEFAULT_CEILINGS: Record<RiskClass, Level> = {
   reversible_self: 5,
   reversible_shared: 4,
@@ -28,7 +28,7 @@ export const DEFAULT_CEILINGS: Record<RiskClass, Level> = {
 };
 
 /**
- * Levels each risk class supports by default (docs/autonomy-levels.md, "Supported
+ * Levels each risk class supports by default (SPEC.md, "Supported
  * levels per action class"). A heads up suits money (a scheduled action you can
  * cancel) but not an email, which people either approve or want sent with an undo.
  */
@@ -69,7 +69,7 @@ export const RISK_ORDER: readonly RiskClass[] = [
 
 /**
  * Level to verdict. L0 and L1 ask, L2 allows with a delay (the recommended
- * option, pending Matt), L3 and above allow.
+ * option), L3 and above allow.
  */
 export function verdictFor(level: Level): Verdict {
   return level <= 1 ? "ask" : "allow";

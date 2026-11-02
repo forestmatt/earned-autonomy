@@ -114,7 +114,7 @@ export function fallbackDecision(base: Base, reason: string, detail?: string): D
 
 /**
  * `can(agent, action, subject, context)`. The decision order from
- * docs/research/gold-standard.md as a pure function. Steps 2 to 8 can only
+ * SPEC.md ("The decision order") as a pure function. Steps 2 to 8 can only
  * lower the outcome, never raise it.
  */
 export function decide(input: DecideInput, config: Config, state: DecideState = {}, opts: DecideOptions): Decision {

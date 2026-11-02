@@ -1,11 +1,11 @@
 /**
- * Core types for the Throtl decision engine.
+ * Core types for the earned autonomy decision engine.
  *
  * Layer 1 (the standard) is the levels, the decision order, the outcome
  * vocabulary and the reason chain. Layer 2 (rules) is in rules.ts.
  */
 
-/** Autonomy levels L0 to L5. See docs/autonomy-levels.md. */
+/** Autonomy levels L0 to L5. See SPEC.md. */
 export type Level = 0 | 1 | 2 | 3 | 4 | 5;
 
 export const LEVELS: readonly Level[] = [0, 1, 2, 3, 4, 5];

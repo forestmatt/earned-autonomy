@@ -1,30 +1,37 @@
-# @throtl/core
+# earned-autonomy
 
-The Throtl decision engine. Pure TypeScript, no I/O, no dependencies. The API Worker, the SDK (local evaluation) and the MCP server all run this same code.
+An open decision engine for AI agents. It decides whether an agent may act for a user, should ask first, or must not, and it says why.
 
-```ts
-import { decide, recordOutcome, DEFAULT_PACK } from "@throtl/core";
-
-const d = decide(
-  { agent: "inbox", subject: "user_123", action: "email.send", context: { to: "new@client.com" } },
-  config,                      // snapshot from GET /v1/config
-  { subscription, trust },     // this subject's plan state and trust scope
-  { now: Date.now() },
-);
-d.decision; // "allow" | "ask" | "deny"
-d.binding;  // "tripwire:novelty"
-d.chain;    // every step of the decision order
+```
+npm i earned-autonomy
 ```
 
-| Module | What it does |
-|---|---|
-| `decide.ts` | The decision order from `docs/research/gold-standard.md`. Never throws, never defaults to allow |
-| `hash.ts` | Published bucketing (double FNV-1a 32, 10,000 buckets) with test vectors |
-| `flags.ts` | Typed flags with rules, rollouts and prerequisites. A gate is a `Flag<Level \| false>` |
-| `experiments.ts` | Arms with `autonomyCap`, layers, global holdouts, exposures |
-| `entitlements.ts` | Plans, ceilings per risk class, subscription lifecycle, the lapsed-subscriber policy |
-| `rules.ts` | Layer 2 rule types (novelty, magnitude, irreversible, drift, confidence, untrusted input, re-check, dormancy) |
-| `promotion.ts` | Outcomes, promotion offers, demotion, decay, manual caps |
-| `packs.ts` | Rule packs (Default, Fintech, Coding agent, Comms) |
+Agents should earn the right to act, one user and one action at a time, and drop back to asking when something is new, big or strange. They should also stay inside the limits your product sets, such as feature rollouts, experiments and paid plans. This engine does all of that in one pure function.
 
-Run the tests from the repo root with `npm test`.
+- **Six levels of autonomy**, from L0 Suggest to L5 Autonomous, earned per agent, per user and per action. See [SPEC.md](SPEC.md).
+- **One decision with a reason.** `decide()` returns `allow`, `ask` or `deny`, the level, a safe message for the user, and an ordered reason chain naming the gate that decided.
+- **Flags, rollouts, experiments, holdouts and plan entitlements** are inputs to the same decision, including lapsed subscribers.
+- **Learned trust.** Approvals earn promotion (offered, never silent), and undos and rejections demote. Tripwires drop one action back to Ask without losing the level.
+- **Signed approvals**, so an agent can never claim a human said yes.
+- **Pure TypeScript.** No I/O, no dependencies, deterministic. It never throws and never defaults to allow.
+
+```ts
+import { decide, recordOutcome, DEFAULT_PACK } from "earned-autonomy";
+
+const d = decide(
+  { agent: "inbox", subject: "sam", action: "email.send", context: { to: "new@client.com" } },
+  config,                      // your actions, flags, experiments, plans and a rule pack
+  { trust, subscription },     // Sam's earned trust and plan, from your storage
+  { now: Date.now() },
+);
+
+d.decision; // "ask"
+d.binding;  // "tripwire:novelty"
+d.message;  // "This one's to a new recipient, so I'm checking first."
+```
+
+You store trust state and decisions yourself. If you'd rather not, [Throtl](https://throtl.ai) is the hosted version, with storage, an API, MCP server, dashboard, audit log and signed approvals built in.
+
+## Licence
+
+Apache-2.0. Copyright 2026 Matt Alcock.

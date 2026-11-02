@@ -24,7 +24,7 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
 /**
- * Default pack promotion thresholds by risk class (Matt, 2026-11-02, BRIEF.md). These are only
+ * Default pack promotion thresholds by risk class . These are only
  * defaults. A config overrides them per risk class (`promotion`) and per action class
  * (`ActionClass.promotion`), and rule packs ship their own. See promotionThresholds().
  */
@@ -243,7 +243,7 @@ export function acceptPromotion(
 /**
  * The thresholds for one action class. The risk class default, then the config's override for
  * that risk class, then the action class's own override, each field by field. `requiresSigned`
- * can only be switched on (Matt, 2026-11-02).
+ * can only be switched on.
  */
 export function promotionThresholds(
   risk: RiskClass,

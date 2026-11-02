@@ -3,7 +3,7 @@
  *
  * The builder's server holds a per-project signing secret and mints a short-lived token for the
  * logged-in user who pressed "approve". The agent never sees the secret, so it can't forge one.
- * Throtl checks the token against what is being approved (one decision and outcome, or one
+ * The engine checks the token against what is being approved (one decision and outcome, or one
  * promotion scope) and rejects unsigned human approvals once the project has a secret.
  *
  * Format: `tap1.<base64url(JSON claims)>.<base64url(HMAC-SHA256(secret, "tap1." + payload))>`.
