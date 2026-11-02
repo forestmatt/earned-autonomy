@@ -30,6 +30,8 @@ export interface ActionClass {
   lapsed?: LapsedRule;
   /** The heads-up window at L2. Defaults to 600 seconds. */
   delaySeconds?: number;
+  /** Overrides the promotion thresholds for this action class, field by field. */
+  promotion?: Partial<PromotionThresholds>;
   description?: string;
 }
 
@@ -58,7 +60,8 @@ export interface Config {
   killed?: string[];
   /** Layer 2 rules, usually from a rule pack. */
   rules?: RuleConfig[];
-  promotion?: Partial<Record<RiskClass, PromotionThresholds>>;
+  /** Overrides the Default pack promotion thresholds per risk class, field by field. */
+  promotion?: Partial<Record<RiskClass, Partial<PromotionThresholds>>>;
 }
 
 /** Longest matching key, so `email.send.bulk` falls back to `email.send`, then `email`. */

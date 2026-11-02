@@ -5,7 +5,7 @@ import { evaluateExperiments } from "./experiments.js";
 import { describeFlagReason, evaluateFlag } from "./flags.js";
 import { hashOf } from "./hash.js";
 import { DEFAULT_CEILINGS, MODES, effectiveLevel, isLevel, verdictFor, snapDown } from "./levels.js";
-import { DEFAULT_PROMOTION, promotionStatus } from "./promotion.js";
+import { promotionStatus, promotionThresholds } from "./promotion.js";
 import { evaluateRule, type RuleEffect } from "./rules.js";
 import type { TrustScope } from "./trust.js";
 import type { ChainStep, DecideInput, Decision, Entity, Exposure, Level, Levels, NextStep } from "./types.js";
@@ -14,6 +14,8 @@ import type { ChainStep, DecideInput, Decision, Entity, Exposure, Level, Levels,
 export interface DecideState {
   subscription?: Subscription;
   trust?: TrustScope;
+  /** Whether the project requires signed approvals. Unsigned projects aren't offered promotion past Ask for money and irreversible actions. */
+  signed?: boolean;
 }
 
 export interface DecideOptions {
@@ -355,8 +357,8 @@ function run(
     next = decision === "ask" ? "approve" : level === 2 ? "wait" : "none";
   } else if (decision === "ask" && state.trust && eff.binding === "earned") {
     // Approval fatigue is a promotion trigger. If the evidence is there, offer.
-    const thresholds = config.promotion?.[ac.risk] ?? DEFAULT_PROMOTION[ac.risk];
-    const promo = promotionStatus(state.trust, thresholds, Math.min(ceiling, rollout, experiment) as Level, now, supported);
+    const thresholds = promotionThresholds(ac.risk, { risk: config.promotion?.[ac.risk], action: ac.promotion });
+    const promo = promotionStatus(state.trust, thresholds, Math.min(ceiling, rollout, experiment) as Level, now, supported, state.signed);
     if (promo.eligible && promo.message) {
       next = "request_promotion";
       message = `${message} ${promo.message}`;

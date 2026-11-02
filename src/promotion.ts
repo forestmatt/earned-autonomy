@@ -13,21 +13,27 @@ export interface PromotionThresholds {
   minDwellMs: number;
   /** After a declined offer, wait this long before offering again. */
   declineCooldownMs: number;
+  /**
+   * Promotion past Ask needs signed approvals (a project signing secret). On by default for
+   * irreversible (money) and regulated actions, so an unsigned project stops at Ask.
+   */
+  requiresSigned?: boolean;
 }
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
 /**
- * Default pack promotion thresholds by risk class. This is the proposal in
- * docs/research/agent-autonomy-landscape.md (edit 13), awaiting Matt.
+ * Default pack promotion thresholds by risk class (Matt, 2026-11-02, BRIEF.md). These are only
+ * defaults. A config overrides them per risk class (`promotion`) and per action class
+ * (`ActionClass.promotion`), and rule packs ship their own. See promotionThresholds().
  */
 export const DEFAULT_PROMOTION: Record<RiskClass, PromotionThresholds> = {
   reversible_self: { minApprovals: 5, minRate: 0.9, cleanRun: 5, minDwellMs: HOUR, declineCooldownMs: DAY },
   reversible_shared: { minApprovals: 10, minRate: 0.9, cleanRun: 5, minDwellMs: DAY, declineCooldownMs: DAY },
   hard_to_reverse: { minApprovals: 20, minRate: 0.95, cleanRun: 5, minDwellMs: 3 * DAY, declineCooldownMs: 3 * DAY },
-  irreversible: { minApprovals: 30, minRate: 0.98, cleanRun: 10, minDwellMs: 7 * DAY, declineCooldownMs: 7 * DAY },
-  regulated: { minApprovals: null, minRate: 1, cleanRun: 10, minDwellMs: 7 * DAY, declineCooldownMs: 7 * DAY },
+  irreversible: { minApprovals: 30, minRate: 0.98, cleanRun: 10, minDwellMs: 7 * DAY, declineCooldownMs: 7 * DAY, requiresSigned: true },
+  regulated: { minApprovals: null, minRate: 1, cleanRun: 10, minDwellMs: 7 * DAY, declineCooldownMs: 7 * DAY, requiresSigned: true },
 };
 
 export const DEFAULT_DECAY_MS = 30 * DAY;
@@ -177,6 +183,8 @@ export function promotionStatus(
   now: number,
   /** Levels the action supports. Promotion goes to the next supported one (layer 1 invariants 4 and 10). */
   supported: readonly Level[] = [0, 1, 2, 3, 4, 5],
+  /** Whether the project requires signed approvals. Undefined means unknown, which doesn't block. */
+  signed?: boolean,
 ): PromotionStatus {
   const s = scope.stats;
   const rate = s.responses === 0 ? 0 : (s.approved + 0.5 * s.edited) / s.responses;
@@ -187,6 +195,7 @@ export function promotionStatus(
 
   const target = nextSupported(scope.earned, supported, clampLevel(cap));
   if (target === null) missing.push("at_ceiling");
+  else if (thresholds.requiresSigned && signed === false && target > 1) missing.push("signed_approvals");
   if (thresholds.minApprovals === null) missing.push("manual_only");
   else if (s.weightedApproved < thresholds.minApprovals) missing.push("approvals");
   if (rate < thresholds.minRate) missing.push("rate");
@@ -218,10 +227,10 @@ export type PromotionResult =
  */
 export function acceptPromotion(
   scope: TrustScope,
-  args: { approver: Approver; thresholds: PromotionThresholds; ceiling: Level; now: number; supported?: readonly Level[] },
+  args: { approver: Approver; thresholds: PromotionThresholds; ceiling: Level; now: number; supported?: readonly Level[]; signed?: boolean },
 ): PromotionResult {
   if (args.approver.kind !== "human") return { ok: false, error: "approver_not_human" };
-  const status = promotionStatus(scope, args.thresholds, args.ceiling, args.now, args.supported);
+  const status = promotionStatus(scope, args.thresholds, args.ceiling, args.now, args.supported, args.signed);
   if (!status.eligible || status.next === null) return { ok: false, error: "not_eligible", missing: status.missing };
   return {
     ok: true,
@@ -229,6 +238,22 @@ export function acceptPromotion(
     to: status.next,
     scope: { ...scope, earned: status.next, levelSince: args.now, stats: emptyStats(), declinedAt: undefined },
   };
+}
+
+/**
+ * The thresholds for one action class. The risk class default, then the config's override for
+ * that risk class, then the action class's own override, each field by field. `requiresSigned`
+ * can only be switched on (Matt, 2026-11-02).
+ */
+export function promotionThresholds(
+  risk: RiskClass,
+  overrides: { risk?: Partial<PromotionThresholds>; action?: Partial<PromotionThresholds> } = {},
+): PromotionThresholds {
+  const base = DEFAULT_PROMOTION[risk];
+  const merged = { ...base, ...overrides.risk, ...overrides.action };
+  // Overrides can require signing for more classes, never drop it for money and irreversible.
+  if (base.requiresSigned || overrides.risk?.requiresSigned || overrides.action?.requiresSigned) merged.requiresSigned = true;
+  return merged;
 }
 
 export function declinePromotion(scope: TrustScope, now: number): TrustScope {
