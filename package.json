@@ -1,0 +1,39 @@
+{
+  "name": "earned-autonomy",
+  "version": "0.1.0",
+  "private": false,
+  "description": "An open decision engine for AI agents. Earned autonomy, flags, experiments and plans in one call that says allow, ask or deny, and why.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "license": "Apache-2.0",
+  "author": "Matt Alcock",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forestmatt/earned-autonomy"
+  },
+  "homepage": "https://github.com/forestmatt/earned-autonomy#readme",
+  "keywords": [
+    "ai",
+    "agents",
+    "earned-autonomy",
+    "human-in-the-loop",
+    "permissions",
+    "feature-flags",
+    "experiments",
+    "entitlements",
+    "mcp"
+  ],
+  "files": [
+    "src",
+    "SPEC.md",
+    "README.md",
+    "LICENSE"
+  ]
+}
