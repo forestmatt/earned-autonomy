@@ -165,7 +165,7 @@ Defaults by risk class, which builders can override per action:
 
 Promotion goes to the next supported level, so `email.send` moves from Ask straight to Act and tell.
 
-**Config check.** When a plan ceiling, rollout cap or experiment arm lands on a level an action doesn't support, Throttle warns the builder when they save the config. For example, "Free caps email.send at L2, which email.send doesn't use, so Free users will stay at L1. Did you mean L3?"
+**Config check.** When a plan ceiling, rollout cap or experiment arm lands on a level an action doesn't support, `validateConfig` warns, so a host can tell the builder when they save the config. For example, "Free caps email.send at L2, which email.send doesn't use, so Free users will stay at L1. Did you mean L3?"
 
 ## Default ceilings by risk class
 

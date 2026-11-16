@@ -27,7 +27,7 @@ const d = decide(
 
 d.decision; // "ask"
 d.binding;  // "tripwire:novelty"
-d.message;  // "This one's to a new recipient, so I'm checking first."
+d.message;  // "This one involves a new recipient, so I'm checking first."
 ```
 
 You store trust state and decisions yourself. If you'd rather not, [Throtl](https://throtl.ai) is the hosted version, with storage, an API, MCP server, dashboard, audit log and signed approvals built in.
