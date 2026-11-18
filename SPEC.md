@@ -87,7 +87,7 @@ h2 = fnv1a32(utf8(lowercase_hex(h1)))
 bucket = h2 mod 10000
 ```
 
-Experiment traffic uses the salt `<salt>:traffic` so ramping traffic never reshuffles arms. Test vectors are in `packages/core/test/hash.test.ts`.
+Experiment traffic uses the salt `<salt>:traffic` so ramping traffic never reshuffles arms. Test vectors are in `packages/core/test/hash.test.ts`, and in `conformance/vectors.json` with the rest.
 
 ---
 

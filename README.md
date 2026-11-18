@@ -32,6 +32,10 @@ d.message;  // "This one involves a new recipient, so I'm checking first."
 
 You store trust state and decisions yourself. If you'd rather not, [Throtl](https://throtl.ai) is the hosted version, with storage, an API, MCP server, dashboard, audit log and signed approvals built in.
 
+## Conformance
+
+`conformance/vectors.json` has inputs and expected outputs for decisions, recorded outcomes and bucketing, so an implementation in another language can check itself. See `conformance/README.md`.
+
 ## Licence
 
 Apache-2.0. Copyright 2026 Matt Alcock.
