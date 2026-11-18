@@ -36,6 +36,8 @@ You store trust state and decisions yourself. If you'd rather not, [Throtl](http
 
 `conformance/vectors.json` has inputs and expected outputs for decisions, recorded outcomes and bucketing, so an implementation in another language can check itself. See `conformance/README.md`.
 
+`conformance/config.schema.json` is a JSON Schema for the config, so you can check one in any language or get completion in your editor with `"$schema": "https://raw.githubusercontent.com/forestmatt/earned-autonomy/main/conformance/config.schema.json"`.
+
 ## Licence
 
 Apache-2.0. Copyright 2026 Matt Alcock.

@@ -15,6 +15,14 @@ Run each case and compare your output with `expect` as JSON. Fields this engine 
 
 The binding, levels and next step carry the behaviour. Messages are this engine's own words, so an implementation in another language may choose to compare only `decision`, `level`, `mode`, `binding`, `levels` and `next`, and say so.
 
+## Config schema
+
+`config.schema.json` is a JSON Schema (draft 2020-12) for the config every case runs against, the engine's `Config` type field for field. Use it to check a config before you load it, or point an editor at it with a `"$schema"` line for completion and inline errors. It's strict, so a misspelt field (`alwaysAks`) is an error rather than silently ignored. Every config in `vectors.json` and every rule pack passes it.
+
+The schema checks shape and ranges. Whether a level is supported by an action, or a gate names a real flag, is the engine's `validateConfig` warnings, and the engine never throws on a bad config (it fails safe and says so in the reason chain).
+
 ## Changes
 
-The file is made from `test/conformance.cases.ts` by the engine itself, and a test fails if they drift. A changed expectation is a behaviour change, so its commit says what changed for other implementations.
+`vectors.json` is made from `test/conformance.cases.ts` by the engine itself, and a test fails if they drift. A changed expectation is a behaviour change, so its commit says what changed for other implementations.
+
+`config.schema.json` is made from `test/config.schema.ts`, and the build fails to typecheck if that schema and the `Config` type drift apart. Regenerate both files with `UPDATE_CONFORMANCE=1`.
