@@ -6,7 +6,7 @@ import { describeFlagReason, evaluateFlag } from "./flags.js";
 import { hashOf } from "./hash.js";
 import { DEFAULT_CEILINGS, MODES, effectiveLevel, isLevel, verdictFor, snapDown } from "./levels.js";
 import { promotionStatus, promotionThresholds } from "./promotion.js";
-import { evaluateRule, type RuleEffect } from "./rules.js";
+import { evaluateRule, type RuleEffect, type Usage } from "./rules.js";
 import type { TrustScope } from "./trust.js";
 import type { ChainStep, DecideInput, Decision, Entity, Exposure, Level, Levels, NextStep } from "./types.js";
 
@@ -16,6 +16,8 @@ export interface DecideState {
   trust?: TrustScope;
   /** Whether the project requires signed approvals. Unsigned projects aren't offered promotion past Ask for money and irreversible actions. */
   signed?: boolean;
+  /** What each budget rule has spent in its window before this call, by budget id. See `budgetsFor`. */
+  usage?: Usage;
 }
 
 export interface DecideOptions {
@@ -331,10 +333,16 @@ function run(
         resource: base.resource,
         trust: state.trust,
         level,
+        usage: state.usage,
       },
       now,
     );
     if (!hit) continue;
+    if (hit.effect === "deny") {
+      // A hard limit. Deny wins, whatever the level or a forced ask.
+      chain.push({ step: "tripwire", result: "deny", id: hit.id, ...(hit.detail ? { detail: hit.detail } : {}) });
+      return deny(hit.id, hit.message);
+    }
     if (hit.effect === "cap") {
       if (hit.level < level) {
         level = hit.level;
@@ -343,7 +351,7 @@ function run(
       }
       chain.push({ step: "tripwire", result: "cap", id: hit.id, level: hit.level });
     } else {
-      chain.push({ step: "tripwire", result: "ask", id: hit.id });
+      chain.push({ step: "tripwire", result: "ask", id: hit.id, ...(hit.detail ? { detail: hit.detail } : {}) });
       if (!tripped || tripped.effect === "cap") tripped = hit;
     }
   }

@@ -43,7 +43,7 @@
       "$ref": "#/$defs/__schema73"
     },
     "promotion": {
-      "$ref": "#/$defs/__schema84"
+      "$ref": "#/$defs/__schema96"
     }
   },
   "required": [
@@ -941,6 +941,9 @@
           },
           {
             "$ref": "#/$defs/__schema83"
+          },
+          {
+            "$ref": "#/$defs/__schema84"
           }
         ],
         "description": "A layer 2 rule. Rules only lower a level or force an ask, never raise anything."
@@ -1162,10 +1165,101 @@
       "additionalProperties": false
     },
     "__schema84": {
-      "description": "Overrides the Default pack promotion thresholds per risk class, field by field.",
-      "$ref": "#/$defs/__schema85"
+      "type": "object",
+      "properties": {
+        "actions": {
+          "$ref": "#/$defs/__schema75"
+        },
+        "minLevel": {
+          "$ref": "#/$defs/__schema76"
+        },
+        "type": {
+          "$ref": "#/$defs/__schema85"
+        },
+        "id": {
+          "$ref": "#/$defs/__schema86"
+        },
+        "per": {
+          "$ref": "#/$defs/__schema87"
+        },
+        "windowMs": {
+          "$ref": "#/$defs/__schema88"
+        },
+        "field": {
+          "$ref": "#/$defs/__schema89"
+        },
+        "ask": {
+          "$ref": "#/$defs/__schema91"
+        },
+        "deny": {
+          "$ref": "#/$defs/__schema93"
+        },
+        "message": {
+          "$ref": "#/$defs/__schema95"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "per",
+        "windowMs"
+      ],
+      "additionalProperties": false,
+      "description": "A rate or cost ceiling. Applies at every level unless minLevel is set."
     },
     "__schema85": {
+      "type": "string",
+      "const": "budget"
+    },
+    "__schema86": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Names the budget. The binding is budget:<id>, and the host supplies its usage by this id."
+    },
+    "__schema87": {
+      "type": "string",
+      "enum": [
+        "subject",
+        "agent",
+        "project"
+      ],
+      "description": "Whose spend is counted."
+    },
+    "__schema88": {
+      "description": "Rolling window in ms.",
+      "$ref": "#/$defs/__schema27"
+    },
+    "__schema89": {
+      "description": "Numeric attribute holding this call's cost. Omitted counts calls.",
+      "$ref": "#/$defs/__schema90"
+    },
+    "__schema90": {
+      "type": "string"
+    },
+    "__schema91": {
+      "description": "Soft limit. Spend above it asks.",
+      "$ref": "#/$defs/__schema92"
+    },
+    "__schema92": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema93": {
+      "description": "Hard limit. Spend above it is denied.",
+      "$ref": "#/$defs/__schema94"
+    },
+    "__schema94": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema95": {
+      "type": "string"
+    },
+    "__schema96": {
+      "description": "Overrides the Default pack promotion thresholds per risk class, field by field.",
+      "$ref": "#/$defs/__schema97"
+    },
+    "__schema97": {
       "type": "object",
       "propertyNames": {
         "$ref": "#/$defs/__schema5"

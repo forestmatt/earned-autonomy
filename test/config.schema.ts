@@ -142,6 +142,19 @@ const rule = z
     z.strictObject({ ...ruleBase, type: z.literal("untrusted_input"), field: z.string() }),
     z.strictObject({ ...ruleBase, type: z.literal("recheck"), every: z.number().int().positive() }),
     z.strictObject({ ...ruleBase, type: z.literal("dormancy"), afterMs: ms }),
+    z
+      .strictObject({
+        ...ruleBase,
+        type: z.literal("budget"),
+        id: z.string().min(1).describe("Names the budget. The binding is budget:<id>, and the host supplies its usage by this id."),
+        per: z.enum(["subject", "agent", "project"]).describe("Whose spend is counted."),
+        windowMs: ms.describe("Rolling window in ms."),
+        field: z.string().optional().describe("Numeric attribute holding this call's cost. Omitted counts calls."),
+        ask: z.number().nonnegative().optional().describe("Soft limit. Spend above it asks."),
+        deny: z.number().nonnegative().optional().describe("Hard limit. Spend above it is denied."),
+        message: z.string().optional(),
+      })
+      .describe("A rate or cost ceiling. Applies at every level unless minLevel is set."),
   ])
   .describe("A layer 2 rule. Rules only lower a level or force an ask, never raise anything.");
 

@@ -54,7 +54,7 @@ An action class can set `askMessage` to name what is being asked ("Can I send th
 | 5. Gate and rollout | deny or level cap | `rollout:<gate>` |
 | 6. Holdout and experiment arm | level cap | `experiment:<exp>/<arm>` |
 | 7. `effective = min(earned, ceiling, rollout, experiment)` | | the lowest is named |
-| 8. Rules (tripwires and re-check counters) | ask or cap, for this call only | `tripwire:<kind>` |
+| 8. Rules (tripwires, re-check counters and budgets) | ask or cap, for this call only. A budget's hard limit denies | `tripwire:<kind>`, `budget:<id>` |
 | 9. Snap to the action's supported levels, rounding down | | the gate that set the level stays named, and the chain notes `levels:<action>` |
 | 10. Level to outcome | | `mode:<name>` |
 
@@ -75,7 +75,7 @@ This one line is why one service has to own flags, subscriptions, experiments an
 
 ## The rule interface
 
-A rule reads the decision context (the action, its attributes, its risk class, the subject's trust scope) and returns nothing, **ask** (for this call only) or **cap** at a lower level. A rule can never raise a level, change the earned level, or turn a deny into anything else. The earned level stays where it was after a tripwire, so "this one's to a new payee, so I'm checking first" costs the agent nothing.
+A rule reads the decision context (the action, its attributes, its risk class, the subject's trust scope) and returns nothing, **ask** (for this call only) or **cap** at a lower level. A budget can also **deny** once its hard limit is passed. A rule can never raise a level, change the earned level, or turn a deny into anything else. The earned level stays where it was after a tripwire, so "this one's to a new payee, so I'm checking first" costs the agent nothing.
 
 ## Bucketing
 
@@ -107,6 +107,9 @@ Each app maps its own context onto the levels. These are the rule types, the def
 | Untrusted input | ask | The action was shaped by content the agent can't vouch for (a web page, an inbound email, tool output) |
 | Re-check | ask | PSD2 style. After N allowed actions without a human check |
 | Dormancy | ask | A long gap since the last action in this scope |
+| Budget | ask, then deny | A rate or cost ceiling over a rolling window, per subject, agent or project. Over `ask` asks, over `deny` denies |
+
+**Budgets.** The engine stays pure, so the host keeps the counts. Before deciding, `budgetsFor(config.rules, action)` lists the budgets that apply. The host passes what each has spent in its window before this call as `state.usage[id]`, a count of calls or the sum of the `field` it names. The engine adds this call (1, or its cost) and compares. A budget applies at every level unless `minLevel` says otherwise, because a hard limit has to stop an ask as well as an act. With no usage supplied, or a cost that isn't a non-negative number, it asks, since it never defaults to allow. What counts as spent is the host's choice, for example calls that went ahead (allowed, or asked and approved).
 
 Rules not yet built as types: grant durations (once, session, until, standing), attention weighting beyond rushed approvals, and the MCP annotation mapping.
 

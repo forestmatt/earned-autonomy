@@ -7,8 +7,9 @@ import type { Attributes, Level, RiskClass } from "./types.js";
  * can only lower a level or force an ask, never raise anything.
  */
 export type RuleEffect =
-  | { effect: "ask"; id: string; message: string }
-  | { effect: "cap"; level: Level; id: string; message: string };
+  | { effect: "ask"; id: string; message: string; detail?: string }
+  | { effect: "cap"; level: Level; id: string; message: string; detail?: string }
+  | { effect: "deny"; id: string; message: string; detail?: string };
 
 export interface RuleInput {
   action: string;
@@ -21,7 +22,12 @@ export interface RuleInput {
   trust?: TrustScope;
   /** Effective level before rules. */
   level: Level;
+  /** What each budget has spent in its window before this call, by budget id. Supplied by the host. */
+  usage?: Usage;
 }
+
+/** Spent so far in each budget's window, by budget id. A count of calls, or the sum of the cost field. */
+export type Usage = Record<string, number>;
 
 interface RuleBase {
   /** Action patterns the rule applies to. Omitted means all. */
@@ -86,7 +92,32 @@ export interface DormancyRule extends RuleBase {
   afterMs: number;
 }
 
+/**
+ * A rate or cost ceiling over a rolling window, counted per subject, agent or project.
+ * The host keeps the counts and passes what was spent before this call in `usage[id]`.
+ * The engine adds this call (1, or its cost field) and compares. Over `ask` asks, over `deny` denies.
+ * Applies at every level unless `minLevel` says otherwise, since a hard limit has to stop an ask too.
+ */
+export interface BudgetRule extends RuleBase {
+  type: "budget";
+  /** Names the budget. Unique in the config. The binding is `budget:<id>`. */
+  id: string;
+  /** Whose spend is counted. */
+  per: "subject" | "agent" | "project";
+  /** Window length in ms, rolling. */
+  windowMs: number;
+  /** Numeric attribute holding this call's cost. Omitted counts calls, each costing 1. */
+  field?: string;
+  /** Soft limit. A call that would take spend above it asks. */
+  ask?: number;
+  /** Hard limit. A call that would take spend above it is denied. */
+  deny?: number;
+  /** What the agent says when the budget stops it. */
+  message?: string;
+}
+
 export type RuleConfig =
+  | BudgetRule
   | NoveltyRule
   | MagnitudeRule
   | IrreversibleRule
@@ -108,12 +139,72 @@ function values(v: unknown): string[] {
   return s === undefined ? [] : [s];
 }
 
+/** The budgets that apply to an action, so a host knows which counts to look up before deciding. */
+export function budgetsFor(rules: RuleConfig[] | undefined, action: string): BudgetRule[] {
+  return (rules ?? []).filter((r): r is BudgetRule => r.type === "budget" && anyActionMatches(r.actions, action));
+}
+
+function windowName(ms: number): string {
+  const units: [number, string][] = [[86_400_000, "day"], [3_600_000, "hour"], [60_000, "minute"], [1000, "second"]];
+  for (const [size, name] of units) {
+    if (ms >= size && ms % size === 0) {
+      const n = ms / size;
+      return n === 1 ? name : `${n} ${name}s`;
+    }
+  }
+  return `${ms}ms`;
+}
+
+function evaluateBudget(rule: BudgetRule, input: RuleInput): RuleEffect | null {
+  if (rule.ask === undefined && rule.deny === undefined) return null;
+  const id = `budget:${rule.id}`;
+  const window = windowName(rule.windowMs);
+  const spent = input.usage ? ownNumber(input.usage, rule.id) : undefined;
+  if (typeof spent !== "number" || !Number.isFinite(spent)) {
+    // Never default to allow. A host that can't count says so, and a human decides.
+    return { effect: "ask", id, message: "I can't check my budget right now, so I'm asking first.", detail: `No usage supplied for ${rule.id}` };
+  }
+  let cost = 1;
+  if (rule.field !== undefined) {
+    const v = input.attrs[rule.field];
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
+      return { effect: "ask", id, message: "I can't tell what this one costs, so I'm checking first.", detail: `${rule.field} is missing or not a number` };
+    }
+    cost = v;
+  }
+  const after = spent + cost;
+  const unit = rule.field ? ` ${rule.field}` : "";
+  if (rule.deny !== undefined && after > rule.deny) {
+    return {
+      effect: "deny",
+      id,
+      message: rule.message ?? "That would take me over my limit, so I'm not doing it.",
+      detail: `${after}${unit} would pass the limit of ${rule.deny} per ${window}`,
+    };
+  }
+  if (rule.ask !== undefined && after > rule.ask) {
+    return {
+      effect: "ask",
+      id,
+      message: rule.message ?? "That would take me over my usual limit, so I'm checking first.",
+      detail: `${after}${unit} would pass ${rule.ask} per ${window}`,
+    };
+  }
+  return null;
+}
+
+function ownNumber(record: Record<string, number>, key: string): number | undefined {
+  return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
 export function evaluateRule(rule: RuleConfig, input: RuleInput, now: number): RuleEffect | null {
   if (!anyActionMatches(rule.actions, input.action)) return null;
-  if (input.level < (rule.minLevel ?? 2)) return null;
+  if (input.level < (rule.minLevel ?? (rule.type === "budget" ? 0 : 2))) return null;
   const { attrs, trust } = input;
 
   switch (rule.type) {
+    case "budget":
+      return evaluateBudget(rule, input);
     case "novelty": {
       if (input.resource && trust?.trustedResources?.includes(input.resource)) return null;
       const seen = trust?.envelope[rule.envelope ?? rule.field]?.values ?? [];

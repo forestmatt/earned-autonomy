@@ -1147,6 +1147,158 @@
           "label": "channel"
         }
       ]
+    },
+    "budgets": {
+      "version": "cfg_conformance_1",
+      "actions": {
+        "doc.draft": {
+          "key": "doc.draft",
+          "risk": "reversible_self"
+        },
+        "email": {
+          "key": "email",
+          "risk": "hard_to_reverse",
+          "feature": "email"
+        },
+        "email.send": {
+          "key": "email.send",
+          "risk": "hard_to_reverse",
+          "feature": "email",
+          "gate": "email-send"
+        },
+        "calendar.accept": {
+          "key": "calendar.accept",
+          "risk": "reversible_shared"
+        },
+        "payment.send": {
+          "key": "payment.send",
+          "risk": "irreversible",
+          "feature": "payments",
+          "ceiling": 4
+        },
+        "account.close": {
+          "key": "account.close",
+          "risk": "irreversible",
+          "alwaysAsk": "account_closure"
+        },
+        "legacy.thing": {
+          "key": "legacy.thing",
+          "risk": "reversible_self",
+          "gate": "missing-gate"
+        }
+      },
+      "flags": {
+        "email-send": {
+          "key": "email-send",
+          "on": true,
+          "variations": [
+            false,
+            2,
+            5
+          ],
+          "offVariation": 0,
+          "rules": [
+            {
+              "id": "blocked",
+              "when": [
+                {
+                  "kind": "subject",
+                  "attr": "blocked",
+                  "op": "eq",
+                  "values": [
+                    true
+                  ]
+                }
+              ],
+              "serve": {
+                "variation": 0
+              }
+            }
+          ],
+          "fallthrough": {
+            "variation": 1
+          }
+        }
+      },
+      "plans": {
+        "free": {
+          "key": "free",
+          "features": {
+            "email": false
+          }
+        },
+        "pro": {
+          "key": "pro",
+          "features": {
+            "email": true,
+            "payments": true
+          },
+          "ceilings": {
+            "irreversible": 2
+          }
+        }
+      },
+      "experiments": [
+        {
+          "key": "auto-accept",
+          "status": "running",
+          "traffic": 100,
+          "actions": [
+            "calendar.*"
+          ],
+          "arms": [
+            {
+              "key": "capped",
+              "weight": 100,
+              "autonomyCap": 1
+            }
+          ]
+        }
+      ],
+      "policies": [
+        {
+          "id": "no-minors",
+          "effect": "forbid",
+          "actions": [
+            "payment.*"
+          ],
+          "when": [
+            {
+              "kind": "subject",
+              "attr": "age",
+              "op": "lt",
+              "values": [
+                18
+              ]
+            }
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "type": "budget",
+          "id": "drafts",
+          "per": "subject",
+          "windowMs": 3600000,
+          "actions": [
+            "doc.*"
+          ],
+          "ask": 10,
+          "deny": 20
+        },
+        {
+          "type": "budget",
+          "id": "spend",
+          "per": "project",
+          "windowMs": 86400000,
+          "actions": [
+            "payment.*"
+          ],
+          "field": "amount",
+          "ask": 100,
+          "deny": 500
+        }
+      ]
     }
   },
   "decide": [
@@ -2892,6 +3044,531 @@
           }
         ],
         "next": "upgrade",
+        "fallback": false,
+        "exposures": [],
+        "configVersion": "cfg_conformance_1",
+        "inputsHash": "1156c0a9",
+        "action": "doc.draft",
+        "agent": "inbox",
+        "subject": "u1"
+      }
+    },
+    {
+      "name": "under a budget the earned level acts",
+      "input": {
+        "agent": "inbox",
+        "subject": "u1",
+        "action": "doc.draft"
+      },
+      "config": "budgets",
+      "state": {
+        "trust": {
+          "earned": 5,
+          "levelSince": 1699640000000,
+          "lastActivity": 1699996400000,
+          "stats": {
+            "responses": 0,
+            "approved": 0,
+            "edited": 0,
+            "rejected": 0,
+            "undone": 0,
+            "weightedApproved": 0
+          },
+          "recent": [],
+          "envelope": {
+            "to": {
+              "values": [
+                "a@x.com"
+              ]
+            }
+          },
+          "sinceCheck": 0
+        },
+        "usage": {
+          "drafts": 5
+        }
+      },
+      "options": {
+        "now": 1700000000000,
+        "id": "dec_conformance"
+      },
+      "expect": {
+        "id": "dec_conformance",
+        "decision": "allow",
+        "level": 5,
+        "mode": "autonomous",
+        "binding": "ceiling:risk/reversible_self",
+        "levels": {
+          "earned": 5,
+          "ceiling": 5,
+          "rollout": 5,
+          "experiment": 5
+        },
+        "message": "Done.",
+        "chain": [
+          {
+            "step": "health",
+            "result": "pass",
+            "id": "health:ok",
+            "detail": "action class doc.draft"
+          },
+          {
+            "step": "policy",
+            "result": "pass",
+            "id": "policy:none"
+          },
+          {
+            "step": "entitlement",
+            "result": "pass",
+            "id": "entitlement:none",
+            "detail": "no feature required",
+            "level": 5
+          },
+          {
+            "step": "rollout",
+            "result": "skip",
+            "id": "rollout:none"
+          },
+          {
+            "step": "experiment",
+            "result": "skip",
+            "id": "experiment:none",
+            "level": 5
+          },
+          {
+            "step": "effective",
+            "result": "pass",
+            "id": "ceiling:risk/reversible_self",
+            "level": 5
+          },
+          {
+            "step": "mode",
+            "result": "pass",
+            "id": "mode:autonomous",
+            "level": 5
+          }
+        ],
+        "next": "none",
+        "fallback": false,
+        "exposures": [],
+        "configVersion": "cfg_conformance_1",
+        "inputsHash": "1156c0a9",
+        "action": "doc.draft",
+        "agent": "inbox",
+        "subject": "u1"
+      }
+    },
+    {
+      "name": "past a budget's soft limit asks",
+      "input": {
+        "agent": "inbox",
+        "subject": "u1",
+        "action": "doc.draft"
+      },
+      "config": "budgets",
+      "state": {
+        "trust": {
+          "earned": 5,
+          "levelSince": 1699640000000,
+          "lastActivity": 1699996400000,
+          "stats": {
+            "responses": 0,
+            "approved": 0,
+            "edited": 0,
+            "rejected": 0,
+            "undone": 0,
+            "weightedApproved": 0
+          },
+          "recent": [],
+          "envelope": {
+            "to": {
+              "values": [
+                "a@x.com"
+              ]
+            }
+          },
+          "sinceCheck": 0
+        },
+        "usage": {
+          "drafts": 10
+        }
+      },
+      "options": {
+        "now": 1700000000000,
+        "id": "dec_conformance"
+      },
+      "expect": {
+        "id": "dec_conformance",
+        "decision": "ask",
+        "level": 1,
+        "mode": "ask",
+        "binding": "budget:drafts",
+        "levels": {
+          "earned": 5,
+          "ceiling": 5,
+          "rollout": 5,
+          "experiment": 5
+        },
+        "message": "That would take me over my usual limit, so I'm checking first.",
+        "chain": [
+          {
+            "step": "health",
+            "result": "pass",
+            "id": "health:ok",
+            "detail": "action class doc.draft"
+          },
+          {
+            "step": "policy",
+            "result": "pass",
+            "id": "policy:none"
+          },
+          {
+            "step": "entitlement",
+            "result": "pass",
+            "id": "entitlement:none",
+            "detail": "no feature required",
+            "level": 5
+          },
+          {
+            "step": "rollout",
+            "result": "skip",
+            "id": "rollout:none"
+          },
+          {
+            "step": "experiment",
+            "result": "skip",
+            "id": "experiment:none",
+            "level": 5
+          },
+          {
+            "step": "effective",
+            "result": "pass",
+            "id": "ceiling:risk/reversible_self",
+            "level": 5
+          },
+          {
+            "step": "tripwire",
+            "result": "ask",
+            "id": "budget:drafts",
+            "detail": "11 would pass 10 per hour"
+          },
+          {
+            "step": "mode",
+            "result": "pass",
+            "id": "mode:ask",
+            "level": 1
+          }
+        ],
+        "next": "approve",
+        "fallback": false,
+        "exposures": [],
+        "configVersion": "cfg_conformance_1",
+        "inputsHash": "1156c0a9",
+        "action": "doc.draft",
+        "agent": "inbox",
+        "subject": "u1"
+      }
+    },
+    {
+      "name": "past a budget's hard limit denies, even a subject still at ask",
+      "input": {
+        "agent": "inbox",
+        "subject": "u1",
+        "action": "doc.draft"
+      },
+      "config": "budgets",
+      "state": {
+        "usage": {
+          "drafts": 20
+        }
+      },
+      "options": {
+        "now": 1700000000000,
+        "id": "dec_conformance"
+      },
+      "expect": {
+        "id": "dec_conformance",
+        "decision": "deny",
+        "level": 0,
+        "mode": "suggest",
+        "binding": "budget:drafts",
+        "levels": {
+          "earned": 1,
+          "ceiling": 5,
+          "rollout": 5,
+          "experiment": 5
+        },
+        "message": "That would take me over my limit, so I'm not doing it.",
+        "chain": [
+          {
+            "step": "health",
+            "result": "pass",
+            "id": "health:ok",
+            "detail": "action class doc.draft"
+          },
+          {
+            "step": "policy",
+            "result": "pass",
+            "id": "policy:none"
+          },
+          {
+            "step": "entitlement",
+            "result": "pass",
+            "id": "entitlement:none",
+            "detail": "no feature required",
+            "level": 5
+          },
+          {
+            "step": "rollout",
+            "result": "skip",
+            "id": "rollout:none"
+          },
+          {
+            "step": "experiment",
+            "result": "skip",
+            "id": "experiment:none",
+            "level": 5
+          },
+          {
+            "step": "effective",
+            "result": "pass",
+            "id": "earned:L1",
+            "level": 1
+          },
+          {
+            "step": "tripwire",
+            "result": "deny",
+            "id": "budget:drafts",
+            "detail": "21 would pass the limit of 20 per hour"
+          }
+        ],
+        "next": "none",
+        "fallback": false,
+        "exposures": [],
+        "configVersion": "cfg_conformance_1",
+        "inputsHash": "1156c0a9",
+        "action": "doc.draft",
+        "agent": "inbox",
+        "subject": "u1"
+      }
+    },
+    {
+      "name": "a cost budget adds this call's cost",
+      "input": {
+        "agent": "inbox",
+        "subject": "u1",
+        "action": "payment.send",
+        "context": {
+          "amount": 60
+        }
+      },
+      "config": "budgets",
+      "state": {
+        "subscription": {
+          "plan": "pro",
+          "status": "active"
+        },
+        "trust": {
+          "earned": 2,
+          "levelSince": 1699640000000,
+          "lastActivity": 1699996400000,
+          "stats": {
+            "responses": 0,
+            "approved": 0,
+            "edited": 0,
+            "rejected": 0,
+            "undone": 0,
+            "weightedApproved": 0
+          },
+          "recent": [],
+          "envelope": {
+            "to": {
+              "values": [
+                "a@x.com"
+              ]
+            }
+          },
+          "sinceCheck": 0
+        },
+        "usage": {
+          "spend": 50
+        }
+      },
+      "options": {
+        "now": 1700000000000,
+        "id": "dec_conformance"
+      },
+      "expect": {
+        "id": "dec_conformance",
+        "decision": "ask",
+        "level": 1,
+        "mode": "ask",
+        "binding": "budget:spend",
+        "levels": {
+          "earned": 2,
+          "ceiling": 2,
+          "rollout": 5,
+          "experiment": 5
+        },
+        "message": "That would take me over my usual limit, so I'm checking first.",
+        "chain": [
+          {
+            "step": "health",
+            "result": "pass",
+            "id": "health:ok",
+            "detail": "action class payment.send"
+          },
+          {
+            "step": "policy",
+            "result": "pass",
+            "id": "policy:none"
+          },
+          {
+            "step": "entitlement",
+            "result": "pass",
+            "id": "entitlement:payments",
+            "detail": "plan pro",
+            "level": 2
+          },
+          {
+            "step": "rollout",
+            "result": "skip",
+            "id": "rollout:none"
+          },
+          {
+            "step": "experiment",
+            "result": "skip",
+            "id": "experiment:none",
+            "level": 5
+          },
+          {
+            "step": "effective",
+            "result": "pass",
+            "id": "ceiling:plan/pro",
+            "level": 2
+          },
+          {
+            "step": "tripwire",
+            "result": "ask",
+            "id": "budget:spend",
+            "detail": "110 amount would pass 100 per day"
+          },
+          {
+            "step": "mode",
+            "result": "pass",
+            "id": "mode:ask",
+            "level": 1
+          }
+        ],
+        "next": "approve",
+        "fallback": false,
+        "exposures": [],
+        "configVersion": "cfg_conformance_1",
+        "inputsHash": "4b44ee01",
+        "action": "payment.send",
+        "agent": "inbox",
+        "subject": "u1"
+      }
+    },
+    {
+      "name": "a budget with no usage supplied asks",
+      "input": {
+        "agent": "inbox",
+        "subject": "u1",
+        "action": "doc.draft"
+      },
+      "config": "budgets",
+      "state": {
+        "trust": {
+          "earned": 5,
+          "levelSince": 1699640000000,
+          "lastActivity": 1699996400000,
+          "stats": {
+            "responses": 0,
+            "approved": 0,
+            "edited": 0,
+            "rejected": 0,
+            "undone": 0,
+            "weightedApproved": 0
+          },
+          "recent": [],
+          "envelope": {
+            "to": {
+              "values": [
+                "a@x.com"
+              ]
+            }
+          },
+          "sinceCheck": 0
+        }
+      },
+      "options": {
+        "now": 1700000000000,
+        "id": "dec_conformance"
+      },
+      "expect": {
+        "id": "dec_conformance",
+        "decision": "ask",
+        "level": 1,
+        "mode": "ask",
+        "binding": "budget:drafts",
+        "levels": {
+          "earned": 5,
+          "ceiling": 5,
+          "rollout": 5,
+          "experiment": 5
+        },
+        "message": "I can't check my budget right now, so I'm asking first.",
+        "chain": [
+          {
+            "step": "health",
+            "result": "pass",
+            "id": "health:ok",
+            "detail": "action class doc.draft"
+          },
+          {
+            "step": "policy",
+            "result": "pass",
+            "id": "policy:none"
+          },
+          {
+            "step": "entitlement",
+            "result": "pass",
+            "id": "entitlement:none",
+            "detail": "no feature required",
+            "level": 5
+          },
+          {
+            "step": "rollout",
+            "result": "skip",
+            "id": "rollout:none"
+          },
+          {
+            "step": "experiment",
+            "result": "skip",
+            "id": "experiment:none",
+            "level": 5
+          },
+          {
+            "step": "effective",
+            "result": "pass",
+            "id": "ceiling:risk/reversible_self",
+            "level": 5
+          },
+          {
+            "step": "tripwire",
+            "result": "ask",
+            "id": "budget:drafts",
+            "detail": "No usage supplied for drafts"
+          },
+          {
+            "step": "mode",
+            "result": "pass",
+            "id": "mode:ask",
+            "level": 1
+          }
+        ],
+        "next": "approve",
         "fallback": false,
         "exposures": [],
         "configVersion": "cfg_conformance_1",

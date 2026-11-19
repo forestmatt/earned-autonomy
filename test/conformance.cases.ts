@@ -68,6 +68,13 @@ export const CONFIGS: Record<string, Config> = {
   emailFullRollout: { ...base, flags: { "email-send": { ...base.flags!["email-send"]!, fallthrough: { variation: 2 } } } },
   draftNeedsEmail: { ...base, actions: { ...base.actions, "doc.draft": { key: "doc.draft", risk: "reversible_self", feature: "email" } } },
   proPaymentsUncapped: { ...base, plans: { pro: { key: "pro", features: { payments: true } } } },
+  budgets: {
+    ...base,
+    rules: [
+      { type: "budget", id: "drafts", per: "subject", windowMs: HOUR, actions: ["doc.*"], ask: 10, deny: 20 },
+      { type: "budget", id: "spend", per: "project", windowMs: DAY, actions: ["payment.*"], field: "amount", ask: 100, deny: 500 },
+    ],
+  },
 };
 
 export interface DecideCase {
@@ -124,6 +131,12 @@ export const DECIDE_CASES: DecideCase[] = [
     { subscription: { plan: "pro", status: "lapsed" }, trust: scope(5) },
     "draftNeedsEmail",
   ),
+  // Budgets. The host supplies what was spent in the window before this call.
+  c("under a budget the earned level acts", {}, { trust: scope(5), usage: { drafts: 5 } }, "budgets"),
+  c("past a budget's soft limit asks", {}, { trust: scope(5), usage: { drafts: 10 } }, "budgets"),
+  c("past a budget's hard limit denies, even a subject still at ask", {}, { usage: { drafts: 20 } }, "budgets"),
+  c("a cost budget adds this call's cost", { action: "payment.send", context: { amount: 60 } }, { subscription: pro, trust: scope(2), usage: { spend: 50 } }, "budgets"),
+  c("a budget with no usage supplied asks", {}, { trust: scope(5) }, "budgets"),
   // Tripwires
   c("a new recipient drops one call to ask", { action: "email.send", context: { to: "new@x.com" } }, { subscription: pro, trust: scope(3) }),
   c(
